@@ -12,6 +12,8 @@ import androidx.navigation.ui.NavigationUI;
 import com.example.cybersecurityproject.databinding.ActivityMainBinding;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import static android.content.ContentValues.TAG;
@@ -24,6 +26,7 @@ import com.google.android.gms.safetynet.SafetyNetApi;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Tasks;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -46,7 +49,27 @@ public class MainActivity extends AppCompatActivity {
 //        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
 //        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
 
+        Button checkButton = findViewById(R.id.buttonCheckThreat);
+        TextInputEditText inputText = findViewById(R.id.urlTextInput);
+
+        // Log to check if onCreate is receiving the correct intent
+        Log.d("MainActivity", "onCreate - Initial Intent: " + getIntent());
+
+        // Handle the intent that started the activity
         handleIntent(getIntent());
+
+        checkButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String url = String.valueOf(inputText.getText());
+
+                if(url.isEmpty()){
+                    Toast.makeText(MainActivity.this, "Please input an URL", Toast.LENGTH_LONG).show();
+                } else {
+                    checkUrlThreat(url);
+                }
+            }
+        });
     }
 
 
@@ -54,14 +77,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        setSafetyNet();
+        initSafeBrowsing();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
-        SafetyNet.getClient(this).shutdownSafeBrowsing();
+        destroySafeBrowsingSession();
     }
 
     @Override
@@ -97,9 +120,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent); // Update the current intent
-        handleIntent(intent);
+        handleIntent(intent); // Re-handle the intent to update sentText
     }
 
+    //Intent Handling
     private void handleIntent(Intent intent) {
         if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())) {
             String type = intent.getType();
@@ -108,24 +132,32 @@ public class MainActivity extends AppCompatActivity {
 
                 if (sharedText != null) {
                     // Log the shared text
-                    Log.d("MainActivity", "Received shared text: " + sharedText);
-
-                    // Display the shared text in a toast
-                    Toast.makeText(this, "Shared Link: " + sharedText, Toast.LENGTH_LONG).show();
+                    Log.d("IntentSharedText", "Received shared text: " + sharedText);
+                    handleSharedText(sharedText);
                 } else {
-                    Log.d("MainActivity", "No text found in the intent");
+                    Log.d("IntentSharedText", "No text found in the intent");
                 }
             } else {
-                Log.d("MainActivity", "Unsupported MIME type: " + type);
+                Log.d("IntentSharedText", "Unsupported MIME type: " + type);
             }
         } else {
-            Log.d("MainActivity", "Intent action is not ACTION_SEND");
+            Log.d("IntentSharedText", "Intent action is not ACTION_SEND");
+        }
+    }
+
+    public void handleSharedText(String sharedText){
+        if (sharedText.isEmpty()) {
+            Toast.makeText(MainActivity.this, "No shared link detected!", Toast.LENGTH_LONG).show();
+            Log.d("SharedText", "No shared link detected");
+        } else {
+            checkUrlThreat(sharedText);
+            Log.d("SharedText", "Shared Link: " + sharedText);
         }
     }
 
 
-    public void setSafetyNet(){
-
+//  Safe Browsing Functions
+    public void initSafeBrowsing(){
         new Thread(() -> {
             try {
                 Tasks.await(SafetyNet.getClient(getApplicationContext()).initSafeBrowsing());
@@ -134,10 +166,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("TAG", "Error initializing SafetyNet: " + e.getMessage());
             }
         }).start();
+    }
 
+    public void destroySafeBrowsingSession(){
+        SafetyNet.getClient(this).shutdownSafeBrowsing();
+    }
 
-        String url = "http://testsafebrowsing.appspot.com/s/phishing.html";
-
+    public void checkUrlThreat(String url){
         SafetyNet.getClient(this).lookupUri(url,
                         "AIzaSyCtYLMLNa_XoZKXU0nn9mYWMDhFyd0DBiA",
                         SafeBrowsingThreat.TYPE_POTENTIALLY_HARMFUL_APPLICATION,
@@ -151,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
                                 if (sbResponse.getDetectedThreats().isEmpty()) {
                                     // No threats found
                                     String rating = "Safe (5/5)";
-                                    Toast.makeText(getApplicationContext(), "No Threats Found! Rating: " + rating, Toast.LENGTH_LONG).show();
+                                    Toast.makeText(getApplicationContext(), "No Threats Found for " + url +"!\nRating: " + rating, Toast.LENGTH_LONG).show();
                                 } else {
                                     // Threats found
                                     List<SafeBrowsingThreat> detectedThreats = sbResponse.getDetectedThreats();
@@ -166,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
 
                                     Toast.makeText(getApplicationContext(),
-                                            "Threats Found! Rating: " + rating + "/5\nDetails: " + threatDetails,
+                                            "Threats Found for " + url + "!\nRating: " + rating + "/5\nDetails: " + threatDetails,
                                             Toast.LENGTH_LONG).show();
                                     Log.d("TAG", "Threats detected: " + threatDetails);
                                 }
