@@ -42,9 +42,12 @@
                 <data android:scheme="http" />
                 <data android:scheme="https" />
             </intent-filter>
-
         </activity>
 
-    </application>
 
+        <meta-data
+            android:name="android.webkit.WebView.EnableSafeBrowsing"
+            android:value="true" />
+
+    </application>
 </manifest>
