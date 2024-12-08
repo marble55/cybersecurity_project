@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.FileUtils;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,6 +16,9 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.cybersecurityproject.databinding.ActivityImageanalyzerBinding;
+import com.example.cybersecurityproject.databinding.ActivityMainBinding;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -41,6 +45,12 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
 
     private static final String TAG = "OCRIntegration";
     private static final String API_KEY = "K84632435688957"; // Replace with your OCR.Space API key
+
+    private ActivityImageanalyzerBinding binding;
+    private Button buttonReturn;
+    private Button buttonAnalyzeImage;
+    private TextView responseDescription;
+
     // Launcher to handle image selection result
     private final ActivityResultLauncher<Intent> galleryLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -67,17 +77,40 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_imageanalyzer);
 
+        binding = ActivityImageanalyzerBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        // Launch the gallery when the activity starts
-        openGallery();
+        setSupportActionBar(binding.toolbar);
+
+        buttonAnalyzeImage = findViewById(R.id.buttonImageAnalyze);
+        buttonReturn = findViewById(R.id.buttonSwitchActivity);
+
+        buttonAnalyzeImage.setOnClickListener(new View.OnClickListener() {
+            // Launch the gallery when the activity starts
+            @Override
+            public void onClick(View v) {
+                 openGallery();
+            }
+        });
+
+        buttonReturn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
     }
 
     private void openGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("image/*");
         galleryLauncher.launch(intent);
+    }
+
+    private void updateResponseDescription(String response){
+        responseDescription = findViewById(R.id.descriptionTextView);
+        responseDescription.setText(response);
     }
 
     private void performOCR(String imagePath) {
@@ -118,6 +151,8 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
 
                     String formatedResponse = extractAndFormatText(responseData);
                     Log.d(TAG, "Formatted OCR Response: " + formatedResponse);
+
+                    updateResponseDescription(formatedResponse);
                 } else {
                     Log.e(TAG, "OCR request failed: " + response.code());
                     runOnUiThread(() ->
@@ -179,6 +214,22 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return formattedText.toString().trim();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (responseDescription != null) {
+            outState.putString("descriptionText", responseDescription.getText().toString());
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState.containsKey("descriptionText")) {
+            updateResponseDescription(savedInstanceState.getString("descriptionText"));
+        }
     }
 
 
