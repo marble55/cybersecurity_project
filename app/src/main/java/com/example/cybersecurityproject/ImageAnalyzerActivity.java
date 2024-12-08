@@ -66,9 +66,11 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
                         }
                         Log.d("ImagePath", imagePath);
                         if (imagePath != null) {
+                            updateResponseDescription("Loading...");
                             performOCR(imagePath);
                         } else {
                             Toast.makeText(this, "Unable to get image path", Toast.LENGTH_SHORT).show();
+                            updateResponseDescription("Unable to get image path");
                         }
                     }
                 }
@@ -85,6 +87,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
 
         buttonAnalyzeImage = findViewById(R.id.buttonImageAnalyze);
         buttonReturn = findViewById(R.id.buttonSwitchActivity);
+        responseDescription = findViewById(R.id.responseTextView);
 
         buttonAnalyzeImage.setOnClickListener(new View.OnClickListener() {
             // Launch the gallery when the activity starts
@@ -108,10 +111,10 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
         galleryLauncher.launch(intent);
     }
 
-    private void updateResponseDescription(String response){
-        responseDescription = findViewById(R.id.descriptionTextView);
-        responseDescription.setText(response);
+    private void updateResponseDescription(String response) {
+        runOnUiThread(() -> responseDescription.setText(response));
     }
+
 
     private void performOCR(String imagePath) {
         OkHttpClient client = new OkHttpClient();
@@ -141,38 +144,28 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
                 Log.e(TAG, "OCR request failed", e);
                 runOnUiThread(() ->
                         Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                updateResponseDescription("Failed");
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    String responseData = response.body().string();
-                    Log.d(TAG, "OCR Response: " + responseData);
+                try {
+                    if (response.isSuccessful()) {
+                        String responseData = response.body().string();
+                        String formattedResponse = extractAndFormatText(responseData);
 
-                    String formatedResponse = extractAndFormatText(responseData);
-                    Log.d(TAG, "Formatted OCR Response: " + formatedResponse);
-
-                    updateResponseDescription(formatedResponse);
-                } else {
-                    Log.e(TAG, "OCR request failed: " + response.code());
-                    runOnUiThread(() ->
-                            Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + response.code(), Toast.LENGTH_SHORT).show());
+                        runOnUiThread(() -> updateResponseDescription(formattedResponse));
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + response.code(), Toast.LENGTH_SHORT).show());
+                    }
+                } finally {
+                    // Delete the temporary file
+                    if (imageFile.exists()) {
+                        imageFile.delete();
+                    }
                 }
             }
         });
-    }
-
-    private File getFileFromUri(Context context, Uri uri) {
-        try {
-            ParcelFileDescriptor parcelFileDescriptor = context.getContentResolver().openFileDescriptor(uri, "r");
-            if (parcelFileDescriptor != null) {
-                FileDescriptor fileDescriptor = parcelFileDescriptor.getFileDescriptor();
-                return new File(fileDescriptor.toString());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     private String saveUriToFile(Context context, Uri uri) throws IOException {
