@@ -4,8 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.FileUtils;
-import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -18,13 +16,11 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.cybersecurityproject.databinding.ActivityImageanalyzerBinding;
-import com.example.cybersecurityproject.databinding.ActivityMainBinding;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +37,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class ImageAnalyzerActivity extends AppCompatActivity {
-
 
     private static final String TAG = "OCRIntegration";
     private static final String API_KEY = "K84632435688957"; // Replace with your OCR.Space API key
@@ -93,7 +88,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
             // Launch the gallery when the activity starts
             @Override
             public void onClick(View v) {
-                 openGallery();
+                openGallery();
             }
         });
 
