@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.cybersecurityproject.databinding.ActivityImageanalyzerBinding;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,7 +46,11 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
     private ActivityImageanalyzerBinding binding;
     private Button buttonReturn;
     private Button buttonAnalyzeImage;
+    private Button buttonModal;
     private TextView responseDescription;
+    private TextView modalExtractedMessage;
+    private ImageView modalImageDisplay;
+
     private AIStudioHelper model = new AIStudioHelper();
 
     // Launcher to handle image selection result
@@ -52,15 +58,20 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri selectedImageUri = result.getData().getData();
+
                     if (selectedImageUri != null) {
                         String imagePath = null;
+                        updateModalImageDisplay(selectedImageUri);
+
                         try {
                             imagePath = saveUriToFile(this, selectedImageUri);
                         } catch (IOException e) {
                             Log.e("ImagePath", Objects.requireNonNull(e.getMessage()));
                             throw new RuntimeException(e);
                         }
+
                         Log.d("ImagePath", imagePath);
+
                         if (imagePath != null) {
                             updateResponseDescription("Loading...");
                             performOCR(imagePath);
@@ -81,9 +92,18 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
 
         setSupportActionBar(binding.toolbar);
 
-        buttonAnalyzeImage = findViewById(R.id.buttonImageAnalyze);
+        responseDescription = findViewById(R.id.textviewResultMessage);
         buttonReturn = findViewById(R.id.buttonSwitchActivity);
-        responseDescription = findViewById(R.id.responseTextView);
+        buttonModal = findViewById(R.id.buttonModal);
+        buttonAnalyzeImage = findViewById(R.id.buttonImageAnalyze);
+
+        //Modal
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_layout_more_info_modal, null);
+        bottomSheetDialog.setContentView(view);
+
+        modalExtractedMessage = bottomSheetDialog.findViewById(R.id.textviewModalMessage);
+        modalImageDisplay = bottomSheetDialog.findViewById(R.id.selectedImageView2);
 
         buttonAnalyzeImage.setOnClickListener(new View.OnClickListener() {
             // Launch the gallery when the activity starts
@@ -99,6 +119,16 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
                 finish();
             }
         });
+
+        buttonModal.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bottomSheetDialog.show();
+            }
+        });
+
+        Button closeButton = view.findViewById(R.id.buttonCloseModal);
+        closeButton.setOnClickListener(v -> bottomSheetDialog.dismiss());
     }
 
     private void openGallery() {
@@ -109,6 +139,16 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
 
     private void updateResponseDescription(String response) {
         runOnUiThread(() -> responseDescription.setText(response));
+    }
+
+    private void updateModalExtractedMessage(String extractedText) {
+        modalExtractedMessage.setText(extractedText);
+    }
+
+    private void updateModalImageDisplay(Uri imageUri){
+
+
+        modalImageDisplay.setImageURI(imageUri);
     }
 
 
@@ -150,6 +190,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
                         //Sending it to OCR and then formatting the text
                         String responseData = response.body().string();
                         String formattedResponse = extractAndFormatText(responseData);
+                        updateModalExtractedMessage(formattedResponse);
 
                         String result = evaluateContentToAI(formattedResponse);
                         runOnUiThread(() -> updateResponseDescription(result));
