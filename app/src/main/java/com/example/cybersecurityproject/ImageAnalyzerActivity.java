@@ -45,6 +45,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
     private Button buttonReturn;
     private Button buttonAnalyzeImage;
     private TextView responseDescription;
+    private AIStudioHelper model = new AIStudioHelper();
 
     // Launcher to handle image selection result
     private final ActivityResultLauncher<Intent> galleryLauncher =
@@ -64,7 +65,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
                             updateResponseDescription("Loading...");
                             performOCR(imagePath);
                         } else {
-                            Toast.makeText(this, "Unable to get image path", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Unable to get image path", Toast.LENGTH_LONG).show();
                             updateResponseDescription("Unable to get image path");
                         }
                     }
@@ -116,7 +117,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
 
         File imageFile = new File(imagePath);
         if (!imageFile.exists()) {
-            Toast.makeText(this, "Image file not found!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Image file not found!", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -138,7 +139,7 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
             public void onFailure(Call call, IOException e) {
                 Log.e(TAG, "OCR request failed", e);
                 runOnUiThread(() ->
-                        Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                        Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 updateResponseDescription("Failed");
             }
 
@@ -146,12 +147,14 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
             public void onResponse(Call call, Response response) throws IOException {
                 try {
                     if (response.isSuccessful()) {
+                        //Sending it to OCR and then formatting the text
                         String responseData = response.body().string();
                         String formattedResponse = extractAndFormatText(responseData);
 
-                        runOnUiThread(() -> updateResponseDescription(formattedResponse));
+                        String result = evaluateContentToAI(formattedResponse);
+                        runOnUiThread(() -> updateResponseDescription(result));
                     } else {
-                        runOnUiThread(() -> Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + response.code(), Toast.LENGTH_SHORT).show());
+                        runOnUiThread(() -> Toast.makeText(ImageAnalyzerActivity.this, "OCR request failed: " + response.code(), Toast.LENGTH_LONG).show());
                     }
                 } finally {
                     // Delete the temporary file
@@ -218,6 +221,13 @@ public class ImageAnalyzerActivity extends AppCompatActivity {
         if (savedInstanceState.containsKey("descriptionText")) {
             updateResponseDescription(savedInstanceState.getString("descriptionText"));
         }
+    }
+
+    private String evaluateContentToAI(String contentToBeEvaluated){
+        String result = model.promptGenerate(contentToBeEvaluated);
+        Log.d("AI Model","Result: " + result);
+
+        return result;
     }
 
 

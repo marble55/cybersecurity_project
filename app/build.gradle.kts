@@ -47,4 +47,7 @@ dependencies {
     implementation (libs.integrity)
     implementation (libs.okhttp)
     implementation (libs.gson)
+    implementation (libs.generativeai)
+    implementation (libs.guava)
+    implementation (libs.reactive.streams)
 }
