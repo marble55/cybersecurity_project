@@ -44,6 +44,9 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".ImageAnalyzerActivity">
+
+        </activity>
 
         <meta-data
             android:name="android.webkit.WebView.EnableSafeBrowsing"

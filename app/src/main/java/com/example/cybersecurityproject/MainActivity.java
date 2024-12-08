@@ -36,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration appBarConfiguration;
     private ActivityMainBinding binding;
 
+    private TextInputEditText inputText;
+    private Button buttonNextActivity;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,12 +51,9 @@ public class MainActivity extends AppCompatActivity {
 //        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
 //        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
 //        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
         Button checkButton = findViewById(R.id.buttonCheckThreat);
-        TextInputEditText inputText = findViewById(R.id.urlTextInput);
-
-        // Log to check if onCreate is receiving the correct intent
-        Log.d("MainActivity", "onCreate - Initial Intent: " + getIntent());
+        inputText = findViewById(R.id.urlTextInput);
+        buttonNextActivity = findViewById(R.id.buttonSwitchActivity);
 
         // Handle the intent that started the activity
         handleIntent(getIntent());
@@ -68,6 +68,14 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     checkUrlThreat(url);
                 }
+            }
+        });
+
+        buttonNextActivity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, ImageAnalyzerActivity.class);
+                startActivity(intent);
             }
         });
     }
